@@ -4,6 +4,9 @@
  * Startet den Hono Server mit MongoDB Connection.
  */
 
+// dotenv MUSS vor allen anderen Imports geladen werden!
+import 'dotenv/config';
+
 import { serve } from '@hono/node-server';
 
 import { connectToDatabase, createIndexes } from '@picsec/db';
