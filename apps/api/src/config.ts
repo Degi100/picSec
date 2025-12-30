@@ -19,6 +19,14 @@ interface Config {
   jwtAccessExpiresIn: string;
   jwtRefreshExpiresIn: string;
 
+  // MinIO
+  minioEndpoint: string;
+  minioPort: number;
+  minioUseSSL: boolean;
+  minioAccessKey: string;
+  minioSecretKey: string;
+  minioBucket: string;
+
   // App
   appName: string;
   apiVersion: string;
@@ -46,6 +54,14 @@ export const config: Config = {
   jwtSecret: getEnv('JWT_SECRET', 'development-secret-change-in-production'),
   jwtAccessExpiresIn: getEnv('JWT_ACCESS_EXPIRES_IN', '15m'),
   jwtRefreshExpiresIn: getEnv('JWT_REFRESH_EXPIRES_IN', '7d'),
+
+  // MinIO
+  minioEndpoint: getEnv('MINIO_ENDPOINT', 'localhost'),
+  minioPort: parseInt(getEnv('MINIO_PORT', '9000'), 10),
+  minioUseSSL: getEnv('MINIO_USE_SSL', 'false') === 'true',
+  minioAccessKey: getEnv('MINIO_ACCESS_KEY', 'minioadmin'),
+  minioSecretKey: getEnv('MINIO_SECRET_KEY', 'minioadmin'),
+  minioBucket: getEnv('MINIO_BUCKET', 'picsec'),
 
   // App
   appName: 'PicSec API',

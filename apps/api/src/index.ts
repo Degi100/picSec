@@ -13,6 +13,7 @@ import { connectToDatabase, createIndexes } from '@picsec/db';
 
 import { config, validateConfig } from './config';
 import { createApp } from './app';
+import { initMinioClient, ensureBucket } from './services/minio';
 
 const main = async (): Promise<void> => {
   console.log('========================================');
@@ -31,6 +32,11 @@ const main = async (): Promise<void> => {
 
   // Indizes erstellen
   await createIndexes();
+
+  // MinIO initialisieren
+  initMinioClient();
+  await ensureBucket();
+  console.log('[MinIO] Verbunden');
 
   // App erstellen
   const app = createApp();
