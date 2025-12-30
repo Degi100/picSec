@@ -1,0 +1,67 @@
+/**
+ * API Konfiguration
+ *
+ * Liest Environment-Variablen und stellt typisierte Config bereit.
+ */
+
+interface Config {
+  // Server
+  port: number;
+  host: string;
+  nodeEnv: 'development' | 'production' | 'test';
+
+  // Database
+  mongoUri: string;
+  mongoDbName: string;
+
+  // JWT
+  jwtSecret: string;
+  jwtAccessExpiresIn: string;
+  jwtRefreshExpiresIn: string;
+
+  // App
+  appName: string;
+  apiVersion: string;
+}
+
+const getEnv = (key: string, defaultValue?: string): string => {
+  const value = process.env[key] ?? defaultValue;
+  if (value === undefined) {
+    throw new Error(`Environment variable ${key} is required`);
+  }
+  return value;
+};
+
+export const config: Config = {
+  // Server
+  port: parseInt(getEnv('PORT', '3000'), 10),
+  host: getEnv('HOST', '0.0.0.0'),
+  nodeEnv: getEnv('NODE_ENV', 'development') as Config['nodeEnv'],
+
+  // Database
+  mongoUri: getEnv('MONGO_URI', 'mongodb://localhost:27017'),
+  mongoDbName: getEnv('MONGO_DB_NAME', 'picsec'),
+
+  // JWT
+  jwtSecret: getEnv('JWT_SECRET', 'development-secret-change-in-production'),
+  jwtAccessExpiresIn: getEnv('JWT_ACCESS_EXPIRES_IN', '15m'),
+  jwtRefreshExpiresIn: getEnv('JWT_REFRESH_EXPIRES_IN', '7d'),
+
+  // App
+  appName: 'PicSec API',
+  apiVersion: '1.0.0',
+};
+
+/**
+ * Validiert die Konfiguration
+ */
+export const validateConfig = (): void => {
+  if (config.nodeEnv === 'production') {
+    if (config.jwtSecret === 'development-secret-change-in-production') {
+      throw new Error('JWT_SECRET muss in Production gesetzt werden!');
+    }
+    if (config.mongoUri === 'mongodb://localhost:27017') {
+      console.warn('[Config] WARNUNG: Lokale MongoDB URI in Production!');
+    }
+  }
+};

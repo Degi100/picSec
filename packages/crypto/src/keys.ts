@@ -6,7 +6,9 @@
  */
 
 import nacl from 'tweetnacl';
-import { encodeBase64, decodeBase64 } from 'tweetnacl-util';
+import util from 'tweetnacl-util';
+
+const { encodeBase64, decodeBase64 } = util;
 
 import { KEY_LENGTHS } from './constants';
 import { seedPhraseToEntropy, normalizeSeedPhrase, validateSeedPhrase } from './seedPhrase';

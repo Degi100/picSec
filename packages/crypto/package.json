@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "E2E Encryption fuer PicSec - Seed Phrase, Key Management, Encrypt/Decrypt",
+  "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {

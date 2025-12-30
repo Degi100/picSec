@@ -11,7 +11,9 @@
  */
 
 import nacl from 'tweetnacl';
-import { decodeBase64, encodeBase64 } from 'tweetnacl-util';
+import util from 'tweetnacl-util';
+
+const { decodeBase64, encodeBase64 } = util;
 
 import { CURRENT_PAYLOAD_VERSION, PAYLOAD_STRUCTURE, KEY_LENGTHS } from './constants';
 

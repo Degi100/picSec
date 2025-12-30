@@ -1,0 +1,30 @@
+{
+  "name": "@picsec/api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PicSec Backend API - Hono + MongoDB",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@picsec/crypto": "workspace:*",
+    "@picsec/db": "workspace:*",
+    "@picsec/shared": "workspace:*",
+    "hono": "^4.6.15",
+    "jose": "^5.9.6",
+    "mongodb": "^6.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
