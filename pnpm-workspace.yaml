@@ -1,0 +1,6 @@
+# PicSec Monorepo Workspace Definition
+packages:
+  # Apps
+  - "apps/*"
+  # Shared Packages
+  - "packages/*"
