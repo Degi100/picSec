@@ -13,6 +13,7 @@ import { timing } from 'hono/timing';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { authRoutes } from './routes/auth';
+import { galleryRoutes } from './routes/galleries';
 import { healthRoutes } from './routes/health';
 
 // App Type mit Variables fuer Auth Context
@@ -67,6 +68,9 @@ export const createApp = (): Hono<{ Variables: AppVariables }> => {
 
   // Auth Routes (oeffentlich)
   v1.route('/auth', authRoutes);
+
+  // Gallery Routes (geschuetzt)
+  v1.route('/galleries', galleryRoutes);
 
   // Mount v1
   app.route('/api/v1', v1);
