@@ -15,7 +15,7 @@ export const createGallerySchema = z.object({
     .min(1, 'Name ist erforderlich')
     .max(100, 'Name darf maximal 100 Zeichen haben')
     .trim(),
-  description: z.string().max(500, 'Beschreibung darf maximal 500 Zeichen haben').nullable(),
+  description: z.string().max(500, 'Beschreibung darf maximal 500 Zeichen haben').nullable().optional(),
   isPublic: z.boolean().default(false),
 });
 
