@@ -79,3 +79,19 @@ export const deactivateGlobalInviteCodeSchema = z.object({
 });
 
 export type DeactivateGlobalInviteCodeInput = z.infer<typeof deactivateGlobalInviteCodeSchema>;
+
+// Galerie-Einladung per Email (direkt an registrierten User)
+export const inviteByEmailSchema = z.object({
+  email: z.string().email('Ungueltige E-Mail-Adresse').toLowerCase(),
+  role: z.enum([GALLERY_ROLES.PHOTOSHOTER, GALLERY_ROLES.VIEWER]),
+});
+
+export type InviteByEmailInput = z.infer<typeof inviteByEmailSchema>;
+
+// Pending Invite annehmen
+export const acceptPendingInviteSchema = z.object({
+  inviteId: z.string().min(1, 'Invite-ID ist erforderlich'),
+  encryptedGalleryKey: z.string().min(1, 'Verschluesselter Galerie-Key ist erforderlich'),
+});
+
+export type AcceptPendingInviteInput = z.infer<typeof acceptPendingInviteSchema>;

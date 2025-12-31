@@ -13,6 +13,7 @@ import type { PublicUser } from './user';
 export const GALLERY_INVITE_TYPES = {
   MAGIC_LINK: 'magic_link',
   CODE: 'code',
+  DIRECT: 'direct', // Direkte Einladung an registrierten User per Email
 } as const;
 
 export type GalleryInviteType = (typeof GALLERY_INVITE_TYPES)[keyof typeof GALLERY_INVITE_TYPES];
@@ -24,11 +25,14 @@ export interface GalleryInvite {
   inviterId: string;
   role: Exclude<GalleryRole, 'owner'>; // Kann nur Photoshoter oder Viewer einladen
   type: GalleryInviteType;
-  token: string; // Magic Link Token oder Code
+  token: string; // Magic Link Token oder Code (leer bei DIRECT)
+  targetUserId: string | null; // Nur bei DIRECT - der eingeladene User
+  targetEmail: string | null; // Nur bei DIRECT - Email des eingeladenen Users
   usedById: string | null;
   expiresAt: Date;
   createdAt: Date;
   usedAt: Date | null;
+  status: 'pending' | 'accepted' | 'declined' | 'expired'; // Nur bei DIRECT
 }
 
 // Galerie-Einladung fuer UI (Preview vor Annahme)

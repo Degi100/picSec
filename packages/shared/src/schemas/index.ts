@@ -9,12 +9,14 @@
 export {
   registerUserSchema,
   loginUserSchema,
+  googleLoginSchema,
   updateProfileSchema,
   changePasswordSchema,
   updateUserStatusSchema,
   updateUserRoleSchema,
   type RegisterUserInput,
   type LoginUserInput,
+  type GoogleLoginInput,
   type UpdateProfileInput,
   type ChangePasswordInput,
   type UpdateUserStatusInput,
@@ -88,6 +90,8 @@ export {
   createGlobalInviteCodeSchema,
   validateGlobalInviteCodeSchema,
   deactivateGlobalInviteCodeSchema,
+  inviteByEmailSchema,
+  acceptPendingInviteSchema,
   type CreateGalleryInviteInput,
   type RedeemGalleryInviteInput,
   type RedeemGalleryInviteByCodeInput,
@@ -95,6 +99,8 @@ export {
   type CreateGlobalInviteCodeInput,
   type ValidateGlobalInviteCodeInput,
   type DeactivateGlobalInviteCodeInput,
+  type InviteByEmailInput,
+  type AcceptPendingInviteInput,
 } from './invite';
 
 // Audit Schemas

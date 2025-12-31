@@ -36,6 +36,7 @@ export const registerUserSchema = z.object({
   password: passwordSchema,
   displayName: displayNameSchema,
   publicKey: publicKeySchema,
+  inviteCode: z.string().toUpperCase().optional(), // Optional: Global Invite Code
 });
 
 export type RegisterUserInput = z.infer<typeof registerUserSchema>;
@@ -47,6 +48,14 @@ export const loginUserSchema = z.object({
 });
 
 export type LoginUserInput = z.infer<typeof loginUserSchema>;
+
+// Google Login
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1, 'ID Token ist erforderlich'),
+  publicKey: publicKeySchema,
+});
+
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 
 // Profil aktualisieren
 export const updateProfileSchema = z.object({

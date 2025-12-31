@@ -81,7 +81,92 @@ imageRoutes.post('/galleries/:galleryId/images', async (c) => {
   // Multipart Form Data parsen
   const formData = await c.req.formData();
 
-  // Metadaten
+  // Einfacher Modus: Einzelnes Bild (fuer Mobile-Entwicklung)
+  const image = formData.get('image') as File | null;
+
+  if (image) {
+    // Einfacher Upload-Modus
+    const width = parseInt(formData.get('width') as string, 10) || 0;
+    const height = parseInt(formData.get('height') as string, 10) || 0;
+    const filename = image.name || 'image.jpg';
+    const mimeType = image.type || 'image/jpeg';
+
+    // Image-ID generieren
+    const imageId = new ObjectId();
+    const imageIdStr = toId(imageId);
+
+    // Das gleiche Bild fuer alle Varianten speichern (Entwicklungsmodus)
+    const imageBuffer = Buffer.from(await image.arrayBuffer());
+
+    const variants: ImageVariantInfo[] = [
+      {
+        variant: IMAGE_VARIANTS.THUMBNAIL,
+        storagePath: getImagePath(galleryId, imageIdStr, IMAGE_VARIANTS.THUMBNAIL),
+        sizeBytes: image.size,
+        width,
+        height,
+      },
+      {
+        variant: IMAGE_VARIANTS.PREVIEW,
+        storagePath: getImagePath(galleryId, imageIdStr, IMAGE_VARIANTS.PREVIEW),
+        sizeBytes: image.size,
+        width,
+        height,
+      },
+      {
+        variant: IMAGE_VARIANTS.ORIGINAL,
+        storagePath: getImagePath(galleryId, imageIdStr, IMAGE_VARIANTS.ORIGINAL),
+        sizeBytes: image.size,
+        width,
+        height,
+      },
+    ];
+
+    // In MinIO hochladen (gleiches Bild fuer alle Varianten)
+    await Promise.all([
+      uploadFile(variants[0]!.storagePath, imageBuffer),
+      uploadFile(variants[1]!.storagePath, imageBuffer),
+      uploadFile(variants[2]!.storagePath, imageBuffer),
+    ]);
+
+    // In MongoDB speichern
+    const now = new Date();
+    await collections.images().insertOne({
+      _id: imageId,
+      galleryId,
+      uploaderId: userId,
+      mimeType,
+      originalFilename: filename,
+      variants,
+      totalSizeBytes: image.size,
+      encryptionVersion: 1,
+      createdAt: now,
+    });
+
+    // Gallery lastUploadAt aktualisieren
+    await collections.galleries().updateOne(
+      { _id: toObjectId(galleryId) },
+      { $set: { lastUploadAt: now, updatedAt: now } }
+    );
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          image: {
+            id: imageIdStr,
+            galleryId,
+            variants,
+            totalSizeBytes: image.size,
+            createdAt: now,
+          },
+        },
+      },
+      201
+    );
+  }
+
+  // Vollstaendiger Modus: Drei Varianten (fuer E2E Encryption)
   const originalFilename = formData.get('originalFilename') as string;
   const mimeType = formData.get('mimeType') as string;
 

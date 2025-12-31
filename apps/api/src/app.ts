@@ -15,6 +15,9 @@ import { errorHandler } from './middleware/errorHandler';
 import { authRoutes } from './routes/auth';
 import { galleryRoutes } from './routes/galleries';
 import { imageRoutes } from './routes/images';
+import { commentRoutes } from './routes/comments';
+import { inviteRoutes } from './routes/invites';
+import { adminRoutes } from './routes/admin';
 import { healthRoutes } from './routes/health';
 
 // App Type mit Variables fuer Auth Context
@@ -75,6 +78,15 @@ export const createApp = (): Hono<{ Variables: AppVariables }> => {
 
   // Image Routes (geschuetzt) - mounten auf root weil /galleries/:id/images und /images/:id
   v1.route('/', imageRoutes);
+
+  // Comment Routes (geschuetzt) - mounten auf root weil /images/:id/comments und /comments/:id
+  v1.route('/', commentRoutes);
+
+  // Invite Routes (geschuetzt) - mounten auf root weil /galleries/:id/invites und /invites/:id
+  v1.route('/', inviteRoutes);
+
+  // Admin Routes (nur fuer Admins)
+  v1.route('/admin', adminRoutes);
 
   // Mount v1
   app.route('/api/v1', v1);

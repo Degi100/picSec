@@ -9,6 +9,7 @@ import { Hono } from 'hono';
 import {
   registerUserSchema,
   loginUserSchema,
+  googleLoginSchema,
   APP_ROLES,
   USER_STATUS,
 } from '@picsec/shared';
@@ -18,7 +19,9 @@ import { validatePublicKey } from '@picsec/crypto';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../middleware/auth';
 import { Errors } from '../middleware/errorHandler';
+import { config } from '../config';
 import type { AppVariables } from '../app';
+import type { GlobalInviteCodeDocument } from '@picsec/db';
 
 export const authRoutes = new Hono<{ Variables: AppVariables }>();
 
@@ -33,6 +36,34 @@ authRoutes.post('/register', async (c) => {
   // Public Key validieren
   if (!validatePublicKey(data.publicKey)) {
     throw Errors.VALIDATION_ERROR({ publicKey: 'Ungueltiger Public Key' });
+  }
+
+  // Invite Code validieren (wenn erforderlich)
+  let inviteCode: GlobalInviteCodeDocument | null = null;
+
+  if (config.requireInviteCode) {
+    if (!data.inviteCode) {
+      throw Errors.VALIDATION_ERROR({ inviteCode: 'Einladungscode ist erforderlich' });
+    }
+
+    inviteCode = await collections.globalInviteCodes().findOne({
+      code: data.inviteCode,
+      isActive: true,
+    });
+
+    if (!inviteCode) {
+      throw Errors.VALIDATION_ERROR({ inviteCode: 'Ungueltiger Einladungscode' });
+    }
+
+    // Pruefen ob abgelaufen
+    if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
+      throw Errors.VALIDATION_ERROR({ inviteCode: 'Einladungscode ist abgelaufen' });
+    }
+
+    // Pruefen ob max uses erreicht
+    if (inviteCode.maxUses && inviteCode.usedCount >= inviteCode.maxUses) {
+      throw Errors.VALIDATION_ERROR({ inviteCode: 'Einladungscode wurde bereits zu oft verwendet' });
+    }
   }
 
   // Pruefen ob Email schon existiert
@@ -65,6 +96,17 @@ authRoutes.post('/register', async (c) => {
   });
 
   const userId = toId(userObjectId);
+
+  // Invite Code als benutzt markieren
+  if (inviteCode) {
+    await collections.globalInviteCodes().updateOne(
+      { _id: inviteCode._id },
+      {
+        $inc: { usedCount: 1 },
+        $push: { usedByIds: userId },
+      }
+    );
+  }
 
   // Tokens generieren
   const accessToken = await generateAccessToken(userId, APP_ROLES.USER);
@@ -149,6 +191,129 @@ authRoutes.post('/login', async (c) => {
     token: refreshToken,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
+    deviceInfo: c.req.header('User-Agent') || null,
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      user: {
+        id: userId,
+        email: user.email,
+        displayName: user.displayName,
+        publicKey: user.publicKey,
+        appRole: user.appRole,
+      },
+      tokens: {
+        accessToken,
+        refreshToken,
+      },
+    },
+  });
+});
+
+// ============================================================================
+// POST /google - Google OAuth Login
+// ============================================================================
+
+authRoutes.post('/google', async (c) => {
+  const body = await c.req.json();
+  const data = googleLoginSchema.parse(body);
+
+  // Public Key validieren
+  if (!validatePublicKey(data.publicKey)) {
+    throw Errors.VALIDATION_ERROR({ publicKey: 'Ungueltiger Public Key' });
+  }
+
+  // Google Access Token verifizieren via userinfo endpoint
+  // (Supabase gibt uns einen Access Token, keinen ID Token)
+  const googleResponse = await fetch(
+    'https://www.googleapis.com/oauth2/v3/userinfo',
+    {
+      headers: {
+        Authorization: `Bearer ${data.idToken}`,
+      },
+    }
+  );
+
+  if (!googleResponse.ok) {
+    throw Errors.UNAUTHORIZED('Ungueltiger Google Token');
+  }
+
+  const googleData = (await googleResponse.json()) as {
+    email: string;
+    email_verified: boolean;
+    name: string;
+    picture?: string;
+    sub: string; // Google User ID
+  };
+
+  // Email muss vorhanden und verifiziert sein
+  if (!googleData.email || !googleData.email_verified) {
+    throw Errors.FORBIDDEN('Google Email ist nicht verifiziert');
+  }
+
+  // User suchen oder erstellen
+  let user = await collections.users().findOne({
+    email: googleData.email,
+  });
+
+  const now = new Date();
+
+  if (!user) {
+    // Neuen User erstellen (ohne Passwort - nur Google Login)
+    const userObjectId = new ObjectId();
+
+    await collections.users().insertOne({
+      _id: userObjectId,
+      email: googleData.email,
+      displayName: googleData.name || googleData.email.split('@')[0] || 'User',
+      passwordHash: '', // Kein Passwort fuer Google-only Users
+      publicKey: data.publicKey,
+      appRole: APP_ROLES.USER,
+      status: USER_STATUS.ACTIVE,
+      pushToken: null,
+      createdAt: now,
+      updatedAt: now,
+      lastActiveAt: now,
+    });
+
+    user = await collections.users().findOne({ _id: userObjectId });
+  } else {
+    // Existierenden User aktualisieren
+    await collections.users().updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          lastActiveAt: now,
+          publicKey: data.publicKey, // Public Key aktualisieren
+        },
+      }
+    );
+  }
+
+  if (!user) {
+    throw Errors.INTERNAL_ERROR('User konnte nicht erstellt werden');
+  }
+
+  // Status pruefen
+  if (user.status !== USER_STATUS.ACTIVE) {
+    throw Errors.FORBIDDEN('Account ist deaktiviert');
+  }
+
+  const userId = toId(user._id);
+
+  // Tokens generieren
+  const accessToken = await generateAccessToken(userId, user.appRole);
+  const refreshToken = await generateRefreshToken(userId, user.appRole);
+
+  // Refresh Token speichern
+  await collections.refreshTokens().insertOne({
+    _id: new ObjectId(),
+    userId: user._id,
+    token: refreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    createdAt: now,
     deviceInfo: c.req.header('User-Agent') || null,
   });
 
@@ -285,6 +450,64 @@ authRoutes.post('/logout-all', async (c) => {
     success: true,
     data: {
       message: `${result.deletedCount} Session(s) beendet`,
+    },
+  });
+});
+
+// ============================================================================
+// POST /validate-invite-code - Invite Code pruefen (oeffentlich)
+// ============================================================================
+
+authRoutes.post('/validate-invite-code', async (c) => {
+  const body = await c.req.json();
+  const { code } = body as { code?: string };
+
+  if (!code) {
+    throw Errors.VALIDATION_ERROR({ code: 'Code ist erforderlich' });
+  }
+
+  const inviteCode = await collections.globalInviteCodes().findOne({
+    code: code.toUpperCase(),
+    isActive: true,
+  });
+
+  if (!inviteCode) {
+    return c.json({
+      success: true,
+      data: {
+        valid: false,
+        reason: 'Code nicht gefunden',
+      },
+    });
+  }
+
+  // Pruefen ob abgelaufen
+  if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
+    return c.json({
+      success: true,
+      data: {
+        valid: false,
+        reason: 'Code ist abgelaufen',
+      },
+    });
+  }
+
+  // Pruefen ob max uses erreicht
+  if (inviteCode.maxUses && inviteCode.usedCount >= inviteCode.maxUses) {
+    return c.json({
+      success: true,
+      data: {
+        valid: false,
+        reason: 'Code wurde bereits zu oft verwendet',
+      },
+    });
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      valid: true,
+      description: inviteCode.description,
     },
   });
 });

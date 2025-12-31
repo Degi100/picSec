@@ -30,6 +30,14 @@ interface Config {
   // App
   appName: string;
   apiVersion: string;
+
+  // Registration
+  requireInviteCode: boolean;
+
+  // Google OAuth
+  googleClientId: string;
+  googleClientIdIos: string;
+  googleClientIdAndroid: string;
 }
 
 const getEnv = (key: string, defaultValue?: string): string => {
@@ -66,6 +74,14 @@ export const config: Config = {
   // App
   appName: 'PicSec API',
   apiVersion: '1.0.0',
+
+  // Registration
+  requireInviteCode: getEnv('REQUIRE_INVITE_CODE', 'true') === 'true',
+
+  // Google OAuth
+  googleClientId: getEnv('GOOGLE_CLIENT_ID', ''),
+  googleClientIdIos: getEnv('GOOGLE_CLIENT_ID_IOS', ''),
+  googleClientIdAndroid: getEnv('GOOGLE_CLIENT_ID_ANDROID', ''),
 };
 
 /**
